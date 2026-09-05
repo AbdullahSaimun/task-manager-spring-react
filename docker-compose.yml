@@ -1,0 +1,57 @@
+# Full containerized stack (Phase 20) — postgres + backend + frontend,
+# each built/run in its own container. Distinct from backend/docker-compose.yml,
+# which only ever ran a bare Postgres for local (non-Docker) backend dev
+# and is untouched by this file — the two are independent stacks, run from
+# different directories, with no shared container names/ports/volumes.
+#
+# Usage: docker compose up --build
+#   frontend → http://localhost:8081
+#   backend  → http://localhost:8080 (mostly for direct API/curl access;
+#              the frontend reaches it through its own nginx proxy, not
+#              this host-mapped port)
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: taskmanager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskmanager}
+    # No host port mapping — only the backend container needs to reach
+    # this, over the compose network's internal DNS/port, same as a real
+    # deployment wouldn't expose its database to the outside world either.
+    volumes:
+      - taskmanager-full-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskmanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taskmanager
+      SPRING_DATASOURCE_USERNAME: taskmanager
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-taskmanager}
+      # HS256 needs a key >= 256 bits (32 raw bytes) — JwtService uses the
+      # string's raw UTF-8 bytes directly, no base64 decoding, so this
+      # placeholder is deliberately long enough to satisfy that on its own
+      # (a shorter, more "obviously fake" placeholder threw a real
+      # WeakKeyException at backend startup — caught by actually running
+      # this compose file, not assumed; CLAUDE.md section 16).
+      APP_JWT_SECRET: ${JWT_SECRET:-please-override-this-default-jwt-secret-with-a-real-one}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+volumes:
+  taskmanager-full-pgdata:

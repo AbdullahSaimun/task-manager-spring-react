@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import com.learning.taskmanager.common.exception.ResourceNotFoundException;
 import com.learning.taskmanager.task.dto.TaskRequest;
 import com.learning.taskmanager.task.dto.TaskResponse;
+import com.learning.taskmanager.user.User;
+import com.learning.taskmanager.user.UserRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,14 +25,19 @@ import org.springframework.data.domain.PageRequest;
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
+    private static final Long USER_ID = 1L;
+
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     private TaskService taskService;
 
     @BeforeEach
     void setUp() {
-        taskService = new TaskService(taskRepository);
+        taskService = new TaskService(taskRepository, userRepository);
     }
 
     private static Task task(Long id, String title, TaskStatus status, TaskPriority priority) {
@@ -44,10 +51,13 @@ class TaskServiceTest {
 
     @Test
     void createSavesAndReturnsMappedResponse() {
+        User user = new User();
+        user.setId(USER_ID);
+        when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
         when(taskRepository.save(any(Task.class))).thenReturn(task(1L, "Write tests", TaskStatus.TODO, TaskPriority.HIGH));
 
         TaskResponse response = taskService.create(
-                new TaskRequest("Write tests", null, TaskStatus.TODO, TaskPriority.HIGH, null));
+                USER_ID, new TaskRequest("Write tests", null, TaskStatus.TODO, TaskPriority.HIGH, null));
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.title()).isEqualTo("Write tests");
@@ -55,18 +65,19 @@ class TaskServiceTest {
 
     @Test
     void getByIdReturnsMappedResponseWhenFound() {
-        when(taskRepository.findById(5L)).thenReturn(Optional.of(task(5L, "Existing", TaskStatus.TODO, TaskPriority.LOW)));
+        when(taskRepository.findByIdAndUserId(5L, USER_ID))
+                .thenReturn(Optional.of(task(5L, "Existing", TaskStatus.TODO, TaskPriority.LOW)));
 
-        TaskResponse response = taskService.getById(5L);
+        TaskResponse response = taskService.getById(USER_ID, 5L);
 
         assertThat(response.title()).isEqualTo("Existing");
     }
 
     @Test
     void getByIdThrowsWhenMissing() {
-        when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+        when(taskRepository.findByIdAndUserId(99L, USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> taskService.getById(99L))
+        assertThatThrownBy(() -> taskService.getById(USER_ID, 99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
     }
@@ -74,9 +85,9 @@ class TaskServiceTest {
     @Test
     void updateAppliesRequestFieldsOntoManagedEntityWithNoExplicitSave() {
         Task existing = task(3L, "Old title", TaskStatus.TODO, TaskPriority.LOW);
-        when(taskRepository.findById(3L)).thenReturn(Optional.of(existing));
+        when(taskRepository.findByIdAndUserId(3L, USER_ID)).thenReturn(Optional.of(existing));
 
-        TaskResponse response = taskService.update(3L,
+        TaskResponse response = taskService.update(USER_ID, 3L,
                 new TaskRequest("New title", "desc", TaskStatus.IN_PROGRESS, TaskPriority.HIGH, null));
 
         assertThat(response.title()).isEqualTo("New title");
@@ -87,9 +98,9 @@ class TaskServiceTest {
     @Test
     void updateStatusChangesOnlyStatus() {
         Task existing = task(7L, "Task", TaskStatus.TODO, TaskPriority.MEDIUM);
-        when(taskRepository.findById(7L)).thenReturn(Optional.of(existing));
+        when(taskRepository.findByIdAndUserId(7L, USER_ID)).thenReturn(Optional.of(existing));
 
-        TaskResponse response = taskService.updateStatus(7L, TaskStatus.DONE);
+        TaskResponse response = taskService.updateStatus(USER_ID, 7L, TaskStatus.DONE);
 
         assertThat(response.status()).isEqualTo(TaskStatus.DONE);
         assertThat(response.title()).isEqualTo("Task");
@@ -97,18 +108,18 @@ class TaskServiceTest {
 
     @Test
     void deleteThrowsWhenMissing() {
-        when(taskRepository.findById(42L)).thenReturn(Optional.empty());
+        when(taskRepository.findByIdAndUserId(42L, USER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> taskService.delete(42L))
+        assertThatThrownBy(() -> taskService.delete(USER_ID, 42L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void deleteRemovesFoundTask() {
         Task existing = task(8L, "Temp", TaskStatus.TODO, TaskPriority.LOW);
-        when(taskRepository.findById(8L)).thenReturn(Optional.of(existing));
+        when(taskRepository.findByIdAndUserId(8L, USER_ID)).thenReturn(Optional.of(existing));
 
-        taskService.delete(8L);
+        taskService.delete(USER_ID, 8L);
 
         verify(taskRepository).delete(existing);
     }
@@ -117,9 +128,9 @@ class TaskServiceTest {
     void searchDelegatesToRepositoryAndMapsResults() {
         Task found = task(1L, "Findable", TaskStatus.TODO, TaskPriority.LOW);
         Page<Task> page = new PageImpl<>(List.of(found));
-        when(taskRepository.search(TaskStatus.TODO, "Findable", PageRequest.of(0, 10))).thenReturn(page);
+        when(taskRepository.search(USER_ID, TaskStatus.TODO, "Findable", PageRequest.of(0, 10))).thenReturn(page);
 
-        Page<TaskResponse> result = taskService.search(TaskStatus.TODO, "Findable", PageRequest.of(0, 10));
+        Page<TaskResponse> result = taskService.search(USER_ID, TaskStatus.TODO, "Findable", PageRequest.of(0, 10));
 
         assertThat(result.getContent()).extracting(TaskResponse::title).containsExactly("Findable");
     }

@@ -11,3 +11,12 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+app:
+  jwt:
+    # Overridable via the APP_JWT_SECRET env var (docker-compose.yml, Phase
+    # 20) — the literal default here is only for local, non-containerized
+    # dev and is fine to keep committed for that purpose (CLAUDE.md section
+    # 18), but a real deployment should always set the env var instead.
+    secret: ${APP_JWT_SECRET:juNXz/95AAk+UYvrC4qM52hBQprmp0vgKj5g6168g5eKfb57xAJopYvhmg9IVNJZ}
+    expiration-ms: 3600000
