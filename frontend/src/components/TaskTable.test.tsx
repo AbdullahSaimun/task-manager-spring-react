@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps } from 'react'
@@ -41,10 +41,6 @@ function renderTable(overrides: Partial<ComponentProps<typeof TaskTable>> = {}) 
   return props
 }
 
-afterEach(() => {
-  vi.restoreAllMocks()
-})
-
 describe('TaskTable', () => {
   it('renders a row per task with a due-date fallback', () => {
     renderTable()
@@ -69,16 +65,23 @@ describe('TaskTable', () => {
 
   it('deletes only after the confirm dialog is accepted', async () => {
     const user = userEvent.setup()
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const props = renderTable()
 
     await user.click(screen.getByRole('button', { name: 'Delete' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(
+      within(dialog).getByText('Delete "Write tests"? This cannot be undone.'),
+    ).toBeInTheDocument()
 
-    expect(confirmSpy).toHaveBeenCalledWith('Delete "Write tests"?')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    // MUI's Dialog plays a closing transition, so it lingers in the DOM
+    // briefly after Cancel is clicked — wait for it to actually unmount.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(props.onDelete).not.toHaveBeenCalled()
 
-    confirmSpy.mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: 'Delete' }))
+    const reopenedDialog = await screen.findByRole('dialog')
+    await user.click(within(reopenedDialog).getByRole('button', { name: 'Delete' }))
 
     expect(props.onDelete).toHaveBeenCalledWith(1)
   })

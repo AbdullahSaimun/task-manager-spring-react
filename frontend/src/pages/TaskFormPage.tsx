@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
+import PageHeader from '../components/PageHeader'
+import LoadingState from '../components/LoadingState'
 import TaskForm from '../components/TaskForm'
 import type { TaskFormValues } from '../components/TaskForm'
 import { createTask, getTask, updateTask } from '../api/tasks'
@@ -60,18 +60,16 @@ function TaskFormPage() {
   }
 
   if (loading) {
-    return <CircularProgress />
+    return <LoadingState label="Loading task…" />
   }
 
   if (loadError) {
-    return <Typography>{loadError}</Typography>
+    return <Alert severity="error">{loadError}</Alert>
   }
 
   return (
     <>
-      <Typography variant="h4" gutterBottom>
-        {existingTask ? `Edit Task ${existingTask.id}` : 'New Task'}
-      </Typography>
+      <PageHeader title={existingTask ? `Edit Task ${existingTask.id}` : 'New Task'} />
       {submitError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {submitError}

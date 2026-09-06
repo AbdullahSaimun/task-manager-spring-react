@@ -1,9 +1,9 @@
 import { Link as RouterLink } from 'react-router-dom'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
+import AddIcon from '@mui/icons-material/Add'
+import PageHeader from '../components/PageHeader'
+import LoadingState from '../components/LoadingState'
 import TaskTable from '../components/TaskTable'
 import SearchBar from '../components/SearchBar'
 import { useTasks } from '../hooks/useTasks'
@@ -30,12 +30,15 @@ function TaskListPage() {
 
   return (
     <>
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">Task List</Typography>
-        <Button component={RouterLink} to="/tasks/new" variant="contained">
-          New Task
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Task List"
+        description="Create, search, and manage your tasks."
+        action={
+          <Button component={RouterLink} to="/tasks/new" variant="contained" startIcon={<AddIcon />}>
+            New Task
+          </Button>
+        }
+      />
       <SearchBar
         search={search}
         onSearchChange={setSearch}
@@ -48,7 +51,7 @@ function TaskListPage() {
         </Alert>
       )}
       {loading ? (
-        <CircularProgress />
+        <LoadingState label="Loading tasks…" />
       ) : (
         <TaskTable
           tasks={tasks}

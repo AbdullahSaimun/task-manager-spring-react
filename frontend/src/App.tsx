@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
+import theme from './theme'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
@@ -10,8 +11,6 @@ import RegisterPage from './pages/RegisterPage'
 import TaskListPage from './pages/TaskListPage'
 import TaskFormPage from './pages/TaskFormPage'
 import AdminPage from './pages/AdminPage'
-
-const theme = createTheme()
 
 function App() {
   return (

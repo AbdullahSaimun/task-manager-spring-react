@@ -3,12 +3,14 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import Alert from '@mui/material/Alert'
 import Link from '@mui/material/Link'
+import IconButton from '@mui/material/IconButton'
+import InputAdornment from '@mui/material/InputAdornment'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import AuthLayout from '../components/AuthLayout'
 import { useAuth } from '../contexts/AuthContext'
 import { getErrorMessage } from '../api/client'
 
@@ -23,6 +25,7 @@ function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -44,31 +47,49 @@ function LoginPage() {
   }
 
   return (
-    <Stack sx={{ maxWidth: 360, mx: 'auto', mt: 8 }} spacing={2}>
-      <Typography variant="h4">Log In</Typography>
-      {submitError && <Alert severity="error">{submitError}</Alert>}
-      <Stack component="form" spacing={2} onSubmit={handleSubmit(onSubmit)}>
-        <TextField
-          label="Username"
-          {...register('username')}
-          error={!!errors.username}
-          helperText={errors.username?.message}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          {...register('password')}
-          error={!!errors.password}
-          helperText={errors.password?.message}
-        />
-        <Button type="submit" variant="contained">
-          Log In
-        </Button>
-      </Stack>
-      <Typography variant="body2">
-        Don't have an account? <Link component={RouterLink} to="/register">Register</Link>
-      </Typography>
-    </Stack>
+    <AuthLayout
+      title="Log In"
+      error={submitError}
+      onSubmit={handleSubmit(onSubmit)}
+      footer={
+        <>
+          Don't have an account? <Link component={RouterLink} to="/register">Register</Link>
+        </>
+      }
+    >
+      <TextField
+        label="Username"
+        {...register('username')}
+        error={!!errors.username}
+        helperText={errors.username?.message}
+      />
+      <TextField
+        label="Password"
+        type={showPassword ? 'text' : 'password'}
+        {...register('password')}
+        error={!!errors.password}
+        helperText={errors.password?.message}
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((value) => !value)}
+                  edge="end"
+                  size="small"
+                >
+                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
+      />
+      <Button type="submit" variant="contained">
+        Log In
+      </Button>
+    </AuthLayout>
   )
 }
 
